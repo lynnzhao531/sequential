@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Richness Explorer</title>
+
+  <!-- jsPsych 7 via CDN -->
+  <link rel="stylesheet" href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css">
+  <script src="https://unpkg.com/jspsych@7.3.4"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.1.3"></script>
+
+  <!-- Three.js for 3D reveal (r128 — DO NOT use newer features like CapsuleGeometry/OrbitControls) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- Experiment CSS -->
+  <link rel="stylesheet" href="css/experiment.css?v=v7">
+
+  <!-- Experiment JS — loaded in dependency order -->
+  <script src="js/utils.js?v=v7"></script>
+  <script src="js/landscape.js?v=v7"></script>
+  <script src="js/grid-renderer.js?v=v7"></script>
+  <script src="js/experiment-state.js?v=v7"></script>
+
+  <!-- Plugins -->
+  <script src="js/plugins/plugin-instructions.js?v=v7"></script>
+  <script src="js/plugins/plugin-transition.js?v=v7"></script>
+  <script src="js/plugins/plugin-select-query.js?v=v7"></script>
+  <script src="js/plugins/plugin-query-point.js?v=v7"></script>
+  <script src="js/plugins/plugin-query-line.js?v=v7"></script>
+  <script src="js/plugins/plugin-query-rect.js?v=v7"></script>
+  <script src="js/plugins/plugin-feedback.js?v=v7"></script>
+  <script src="js/plugins/plugin-guess.js?v=v7"></script>
+  <script src="js/plugins/plugin-continue-decision.js?v=v7"></script>
+  <script src="js/plugins/plugin-attention-check.js?v=v7"></script>
+  <script src="js/plugins/plugin-3d-reveal.js?v=v7"></script>
+  <script src="js/plugins/plugin-demographics.js?v=v7"></script>
+
+  <!-- v7: participant-ID entry (conditional) + completion code/redirect -->
+  <script src="js/plugins/plugin-participant-id-entry.js?v=v7"></script>
+  <script src="js/plugins/plugin-completion.js?v=v7"></script>
+
+  <!-- Main (last) -->
+  <script src="js/main.js?v=v7"></script>
+</head>
+<body>
+  <!-- jsPsych renders into document.body by default -->
+</body>
+</html>

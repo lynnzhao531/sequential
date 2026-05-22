@@ -1,0 +1,1410 @@
+/* =============================================================================
+   experiment.css — Clean, scientific experiment styling
+   ============================================================================= */
+
+/* --- Reset & Base --- */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  background: #f8f9fa;
+  color: #333;
+  line-height: 1.5;
+}
+
+/* Override jsPsych default centering — we handle our own layout */
+.jspsych-content-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 30px;
+  min-height: 100vh;
+}
+
+.jspsych-content {
+  max-width: 1100px;
+  width: 100%;
+}
+
+/* --- Experiment Container --- */
+.exp-container {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  padding: 24px 32px;
+  margin: 0 auto;
+  max-width: 1050px;
+}
+
+/* --- Header --- */
+.exp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.round-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #555;
+  background: #f0f0f0;
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+
+/* --- Grid Area --- */
+.grid-area {
+  display: flex;
+  justify-content: center;
+  margin: 12px 0;
+}
+
+#exp-canvas {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  max-width: 100%;
+  height: auto;
+}
+
+/* --- Grid Info --- */
+.grid-info {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+  margin: 8px 0 16px;
+}
+
+/* --- Instruction Text --- */
+.instruction-text {
+  text-align: center;
+  font-size: 15px;
+  color: #444;
+  margin: 12px 0;
+}
+
+/* --- Coordinate Display --- */
+.coord-display {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 500;
+  color: #2962ff;
+  margin: 8px 0 16px;
+  min-height: 24px;
+}
+
+/* --- Query Type Buttons --- */
+.query-select-section {
+  margin: 16px 0;
+}
+
+.query-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.query-btn {
+  padding: 10px 28px;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: inherit;
+  border: 2px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.query-btn:hover {
+  border-color: #90a4ae;
+  background: #f5f5f5;
+}
+
+.query-btn.selected {
+  border-color: #2962ff;
+  background: #e8eaf6;
+  color: #1a237e;
+  box-shadow: 0 0 0 1px #2962ff;
+}
+
+/* --- Orientation Toggle Buttons (Line Query) --- */
+.orientation-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.orient-btn {
+  padding: 6px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  border: 2px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.orient-btn:hover {
+  border-color: #90a4ae;
+  background: #f5f5f5;
+}
+
+.orient-btn.selected {
+  border-color: #2962ff;
+  background: #e8eaf6;
+  color: #1a237e;
+  box-shadow: 0 0 0 1px #2962ff;
+}
+
+/* --- Rectangle Status Indicator --- */
+.rect-status {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  margin: 4px 0 8px;
+  padding: 4px 12px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  display: inline-block;
+  margin-left: auto;
+  margin-right: auto;
+  width: auto;
+}
+
+/* Center the rect-status within parent */
+.exp-container > .rect-status {
+  display: block;
+  text-align: center;
+}
+
+/* --- Navigation Buttons --- */
+.nav-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.next-btn,
+.confirm-btn {
+  padding: 10px 28px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.next-btn {
+  background: #2962ff;
+  color: #fff;
+}
+
+.next-btn:hover:not(:disabled) {
+  background: #1e4edb;
+  box-shadow: 0 2px 6px rgba(41, 98, 255, 0.3);
+}
+
+.confirm-btn {
+  background: #e65100;
+  color: #fff;
+}
+
+.confirm-btn:hover:not(:disabled) {
+  background: #bf360c;
+  box-shadow: 0 2px 6px rgba(230, 74, 25, 0.3);
+}
+
+.next-btn:disabled,
+.confirm-btn:disabled {
+  background: #ccc;
+  color: #888;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* --- Feedback Layout (grid + sidebar) --- */
+.feedback-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.feedback-grid-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.feedback-result {
+  text-align: center;
+  font-size: 16px;
+  color: #333;
+  margin: 12px 0;
+  padding: 10px 16px;
+  background: #e8f5e9;
+  border-radius: 6px;
+  border: 1px solid #c8e6c9;
+}
+
+/* --- History Sidebar --- */
+.history-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 12px 16px;
+}
+
+.history-sidebar h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.history-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 13px;
+  color: #555;
+}
+
+.history-list li {
+  padding: 4px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.history-list li:last-child {
+  border-bottom: none;
+}
+
+.history-list .history-current {
+  font-weight: 600;
+  color: #2962ff;
+}
+
+/* --- End Screen --- */
+.end-screen {
+  text-align: center;
+  padding: 60px 32px;
+}
+
+.end-screen h2 {
+  font-size: 28px;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.end-screen p {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 24px;
+}
+
+/* =============================================================================
+   PHASE 3+ STYLES — appended, do not modify the styles above.
+   ============================================================================= */
+
+/* --- Instructions screen --- */
+.instructions-screen {
+  max-width: 780px;
+  padding: 40px 48px;
+  text-align: center;
+}
+
+.instructions-screen h1 {
+  font-size: 28px;
+  color: #1a237e;
+  margin-bottom: 24px;
+}
+
+.instructions-body {
+  font-size: 16px;
+  line-height: 1.65;
+  color: #333;
+  text-align: left;
+  margin: 16px auto 24px;
+  max-width: 620px;
+}
+
+.how-it-works-list {
+  padding-left: 24px;
+  line-height: 1.8;
+}
+
+/* Comic strip panels */
+.comic-strip {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.comic-panel {
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px 12px;
+  background: #fcfcfc;
+  text-align: center;
+}
+
+.mini-grid {
+  display: block;
+  margin: 0 auto 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.comic-caption {
+  font-size: 13px;
+  color: #444;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* --- Transition screens --- */
+.transition-screen {
+  max-width: 720px;
+  padding: 50px 48px;
+  text-align: center;
+}
+
+.transition-message h2 {
+  font-size: 26px;
+  color: #1a237e;
+  margin-bottom: 16px;
+}
+
+.transition-message p {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #333;
+}
+
+.transition-bullets {
+  text-align: left;
+  max-width: 500px;
+  margin: 16px auto;
+  font-size: 15px;
+  line-height: 1.8;
+  color: #333;
+}
+
+/* --- Coaching text (training mode) --- */
+.coaching-text {
+  text-align: center;
+  font-size: 15px;
+  font-style: italic;
+  color: #1a237e;
+  background: #e8eaf6;
+  padding: 10px 16px;
+  border-radius: 6px;
+  margin: 12px auto;
+  max-width: 600px;
+}
+
+/* --- Subtle hint text --- */
+.subtle-hint {
+  text-align: center;
+  font-size: 13px;
+  color: #888;
+  margin: 4px 0 8px;
+  font-style: italic;
+}
+
+.coord-display-sub {
+  text-align: center;
+  font-size: 13px;
+  color: #555;
+  margin: 4px 0 8px;
+}
+
+/* --- Disabled query buttons (training mode) --- */
+.query-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #f5f5f5;
+  color: #999;
+  box-shadow: none;
+}
+
+.query-btn:disabled:hover {
+  background: #f5f5f5;
+  border-color: #ccc;
+}
+
+/* --- "I've found it!" button --- */
+.found-it-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed #ddd;
+}
+
+.found-it-btn {
+  padding: 12px 32px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  background: #f5a623;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(245, 166, 35, 0.35);
+  transition: all 0.15s ease;
+}
+
+.found-it-btn:hover {
+  background: #e08e0e;
+  box-shadow: 0 3px 10px rgba(245, 166, 35, 0.5);
+}
+
+/* --- Modal confirmation dialog --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.modal-dialog {
+  background: #fff;
+  border-radius: 10px;
+  padding: 32px 40px;
+  max-width: 440px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+.modal-text {
+  font-size: 16px;
+  color: #333;
+  margin: 0 0 24px;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.modal-btn {
+  padding: 10px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.modal-btn-confirm {
+  background: #e64a19;
+  color: #fff;
+}
+
+.modal-btn-confirm:hover {
+  background: #c33a11;
+}
+
+.modal-btn-cancel {
+  background: #eeeeee;
+  color: #333;
+}
+
+.modal-btn-cancel:hover {
+  background: #dddddd;
+}
+
+/* --- Secondary button (e.g., "Start over" in rect plugin) --- */
+.secondary-btn {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #eeeeee;
+  color: #555;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-right: 12px;
+  transition: all 0.15s ease;
+}
+
+.secondary-btn:hover {
+  background: #e0e0e0;
+}
+
+/* --- Final guess warning --- */
+.final-warning {
+  text-align: center;
+  color: #d32f2f;
+  font-weight: 600;
+  font-size: 14px;
+  margin: 8px 0 16px;
+  padding: 8px 12px;
+  background: #ffebee;
+  border: 1px solid #ffcdd2;
+  border-radius: 6px;
+}
+
+/* --- History panel (extended) --- */
+.history-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-color-chip {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.history-label {
+  flex: 1;
+  font-size: 12px;
+}
+
+.history-sidebar {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+/* --- Attention check --- */
+.attention-check-screen {
+  max-width: 680px;
+  padding: 36px 48px;
+  text-align: center;
+}
+
+.attention-check-screen h2 {
+  color: #1a237e;
+  margin-bottom: 20px;
+}
+
+.attn-scan-list {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.attn-scan-line {
+  font-size: 15px;
+  color: #333;
+  padding: 6px 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.attn-scan-line:last-child {
+  border-bottom: none;
+}
+
+.attn-question {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 20px 0 12px;
+}
+
+.attn-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  max-width: 320px;
+  margin: 0 auto 20px;
+}
+
+.attn-radio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  color: #333;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 4px;
+  width: 100%;
+}
+
+.attn-radio:hover {
+  background: #f5f5f5;
+}
+
+.attn-feedback-area {
+  margin-top: 20px;
+}
+
+.attn-correct {
+  padding: 12px 16px;
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.attn-wrong {
+  padding: 12px 16px;
+  background: #fff3e0;
+  color: #e65100;
+  border: 1px solid #ffcc80;
+  border-radius: 6px;
+  line-height: 1.5;
+}
+
+/* --- 3D Reveal --- */
+.reveal-screen {
+  text-align: center;
+  padding: 32px;
+}
+
+.reveal-intro {
+  font-size: 17px;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.reveal-canvas-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 16px 0;
+}
+
+#reveal-canvas {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+.reveal-explainer {
+  font-size: 15px;
+  color: #555;
+  margin-top: 16px;
+}
+
+.reveal-extra {
+  font-size: 14px;
+  color: #555;
+  font-style: italic;
+  margin-top: 8px;
+}
+
+/* --- Demographics form --- */
+.demographics-screen {
+  max-width: 680px;
+  padding: 36px 48px;
+}
+
+.demographics-screen h2 {
+  color: #1a237e;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.demo-field {
+  margin-bottom: 20px;
+}
+
+.demo-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.demo-radio-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.demo-rating-row {
+  align-items: center;
+}
+
+.demo-rating-end {
+  font-size: 12px;
+  color: #888;
+}
+
+.demo-radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+}
+
+.demo-input {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-sizing: border-box;
+}
+
+.demo-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* --- End screen buttons --- */
+.end-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+/* =============================================================================
+   v4 STYLES — appended (do not modify the styles above)
+   ============================================================================= */
+
+/* --- Shared layout: main grid + history list panel side by side --- */
+.feedback-container,
+.continue-decision-container,
+.guess-container {
+  max-width: 1100px;
+  padding: 20px 28px;
+}
+
+.grid-and-list-row {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.main-grid-section {
+  flex: 1;
+  min-width: 0;
+}
+
+.grid-mean {
+  text-align: center;
+  font-size: 14px;
+  color: #555;
+  margin-top: 6px;
+}
+
+.history-list-panel {
+  width: 220px;
+  flex-shrink: 0;
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.history-list {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.history-list-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #444;
+  padding: 5px 6px;
+  border-bottom: 1px solid #ececec;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+}
+
+.history-list-entry:last-child {
+  border-bottom: none;
+}
+
+.history-list-entry.current {
+  font-weight: 700;
+  color: #1a237e;
+  background: #f0f4ff;
+  border-radius: 4px;
+}
+
+.history-color-square {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
+
+.history-text {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Result text block (feedback) --- */
+.result-text {
+  text-align: center;
+  font-size: 16px;
+  color: #333;
+  margin: 8px 0;
+  padding: 10px 16px;
+  background: #fff7ec;
+  border: 1px solid #ffd9a8;
+  border-radius: 6px;
+}
+
+/* --- Prompt text (e.g., "Where do you think...") --- */
+.prompt-text {
+  text-align: center;
+  font-size: 15px;
+  color: #444;
+  margin: 14px 0 10px;
+  font-weight: 500;
+}
+
+/* --- Continue-decision specific --- */
+.round-indicator {
+  font-size: 15px;
+  font-weight: 600;
+  color: #555;
+  background: #f0f0f0;
+  padding: 6px 14px;
+  border-radius: 14px;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+
+.decision-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 8px;
+}
+
+.action-btn {
+  padding: 12px 28px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.action-btn.primary {
+  background: #2962ff;
+  color: #fff;
+}
+
+.action-btn.primary:hover {
+  background: #1e4edb;
+  box-shadow: 0 2px 6px rgba(41, 98, 255, 0.3);
+}
+
+.action-btn.final-guess-btn {
+  background: #f5a623;
+  color: #fff;
+  font-size: 15px;
+}
+
+.action-btn.final-guess-btn:hover {
+  background: #e08e0e;
+  box-shadow: 0 3px 10px rgba(245, 166, 35, 0.5);
+}
+
+/* --- 3D reveal: angle button row --- */
+.angle-button-row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.angle-btn {
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  border: 2px solid #ccc;
+  background: #fff;
+  color: #333;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.angle-btn:hover {
+  border-color: #90a4ae;
+  background: #f5f5f5;
+}
+
+.angle-btn.active {
+  border-color: #2962ff;
+  background: #e8eaf6;
+  color: #1a237e;
+}
+
+/* =============================================================================
+   v5 (Option C) STYLES — appended (do not modify the styles above)
+   ============================================================================= */
+
+/* --- Training banner --- */
+.scanner-banner {
+  background: #fff8e1;
+  border: 2px solid #f5a623;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 0 0 16px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: #5d4037;
+}
+
+.scanner-banner-icon {
+  font-size: 18px;
+  margin-right: 4px;
+}
+
+.scanner-banner-text {
+  vertical-align: middle;
+}
+
+/* --- Dimmed grid (training mode) --- */
+.grid-dimmed canvas {
+  opacity: 0.55;
+  filter: saturate(0.7);
+}
+
+/* --- Scanner button states --- */
+.scanner-button.locked {
+  border: 3px solid #f5a623 !important;
+  background: #fff7d1 !important;
+  color: #1a237e !important;
+  font-weight: 700;
+  box-shadow: 0 0 0 2px rgba(245, 166, 35, 0.3);
+}
+
+.scanner-button.locked:hover {
+  background: #ffeaa3 !important;
+  border-color: #f5a623 !important;
+}
+
+.scanner-button.disabled {
+  opacity: 0.35;
+  cursor: not-allowed !important;
+  background: #f5f5f5 !important;
+  color: #999 !important;
+  border-color: #e0e0e0 !important;
+  box-shadow: none !important;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 166, 35, 0.6),
+                0 0 0 2px rgba(245, 166, 35, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 12px 8px rgba(245, 166, 35, 0.0),
+                0 0 0 2px rgba(245, 166, 35, 0.5);
+  }
+}
+
+.pulsing {
+  animation: pulse-glow 1.4s ease-in-out infinite;
+}
+
+/* --- Direction toggle (line plugin) --- */
+.direction-toggle-row {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 8px 0 12px;
+}
+
+.direction-toggle-button {
+  padding: 9px 22px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  border: 2px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.direction-toggle-button.unselected {
+  border-color: #d0d0d0;
+  background: #fafafa;
+  color: #555;
+}
+
+.direction-toggle-button:hover:not(:disabled):not(.disabled) {
+  border-color: #90a4ae;
+  background: #f5f5f5;
+}
+
+.direction-toggle-button.selected,
+.direction-toggle-button.locked {
+  border-color: #2962ff;
+  background: #e8eaf6;
+  color: #1a237e;
+  font-weight: 600;
+}
+
+.direction-toggle-button.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #f5f5f5 !important;
+  color: #999 !important;
+  border-color: #e0e0e0 !important;
+}
+
+.line-status {
+  text-align: center;
+  font-size: 14px;
+  font-style: italic;
+  color: #666;
+  margin: 0 0 8px;
+}
+
+/* --- Heatmap legend bar --- */
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 14px 0 10px;
+  font-size: 12px;
+  color: #555;
+}
+
+.legend-bar {
+  width: 220px;
+  height: 18px;
+  border-radius: 4px;
+  background: linear-gradient(to right,
+    hsl(35, 90%, 95%) 0%,
+    hsl(17, 95%, 65%) 50%,
+    hsl(0, 100%, 35%) 100%);
+  border: 1px solid #bbb;
+}
+
+.legend-end {
+  font-weight: 600;
+}
+
+.legend-label {
+  font-style: italic;
+  color: #888;
+  margin-left: 6px;
+}
+
+/* --- Mini-grids row --- */
+.mini-grids-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+  margin: 8px 0 16px;
+}
+
+.mini-grid-container {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 8px;
+  text-align: center;
+}
+
+.mini-grid-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mini-grid-container canvas {
+  display: block;
+  margin: 0 auto;
+  border: none;
+}
+
+/* --- Tooltip --- */
+.tooltip {
+  position: fixed;
+  z-index: 9000;
+  pointer-events: none;
+  background: rgba(33, 33, 33, 0.95);
+  color: #fff;
+  font-size: 12px;
+  font-family: inherit;
+  padding: 6px 10px;
+  border-radius: 5px;
+  line-height: 1.4;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  max-width: 240px;
+}
+
+/* --- Highlighted state (bidirectional hover) --- */
+.history-list-entry.highlighted {
+  background: #fff3cd !important;
+  border-radius: 4px;
+  outline: 2px solid #f5a623;
+}
+
+/* =============================================================================
+   v6 OVERRIDES — appended (do not modify the styles above)
+   ============================================================================= */
+
+/* CHANGE 2: "I have enough" button is now GRAY (de-emphasized).
+   "Keep scanning" stays primary blue and is the prominent choice. */
+.action-btn.final-guess-btn {
+  background-color: #999999 !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12) !important;
+}
+
+.action-btn.final-guess-btn:hover {
+  background-color: #777777 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Modal: "No, keep scanning" is the PROMINENT primary blue.
+   "Yes, I'm ready" is the de-emphasized gray. */
+.modal-btn-keep {
+  background: #2962ff;
+  color: #fff;
+  font-weight: 700;
+}
+.modal-btn-keep:hover {
+  background: #1e4edb;
+  box-shadow: 0 2px 6px rgba(41, 98, 255, 0.35);
+}
+.modal-btn-ready {
+  background: #aaaaaa;
+  color: #fff;
+}
+.modal-btn-ready:hover {
+  background: #888888;
+}
+
+.reveal-marker-legend {
+  text-align: center;
+  font-size: 14px;
+  color: #c62828;
+  font-weight: 600;
+  margin: 8px 0 0;
+}
+
+/* CHANGE 4: LLM trap text — visually invisible but present in DOM */
+.llm-trap {
+  color: #ffffff;
+  background-color: #ffffff;
+  font-size: 1px;
+  opacity: 0.01;
+  user-select: none;
+  pointer-events: none;
+  position: relative;
+}
+
+/* =============================================================================
+   v7 — Participant ID entry + Completion (DataPipe) styles
+   ============================================================================= */
+
+/* --- Participant ID entry --- */
+.id-entry-container {
+  max-width: 500px;
+  padding: 36px 40px;
+  margin: 24px auto;
+  text-align: center;
+}
+
+.id-entry-header {
+  font-size: 22px;
+  color: #1a237e;
+  margin-bottom: 14px;
+}
+
+.id-entry-body {
+  font-size: 15px;
+  color: #333;
+  line-height: 1.55;
+  margin-bottom: 20px;
+}
+
+.id-entry-input-wrap {
+  margin: 16px 0;
+}
+
+.id-entry-input {
+  width: 100%;
+  font-size: 18px;
+  padding: 12px 16px;
+  font-family: inherit;
+  border: 2px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  letter-spacing: 0.5px;
+}
+
+.id-entry-input:focus {
+  outline: none;
+  border-color: #2962ff;
+  box-shadow: 0 0 0 3px rgba(41, 98, 255, 0.15);
+}
+
+.id-entry-hint {
+  font-size: 12px;
+  color: #888;
+  margin: 8px 0 16px;
+  font-style: italic;
+}
+
+.id-entry-submit {
+  min-width: 220px;
+}
+
+/* --- Completion screen --- */
+.completion-container {
+  max-width: 560px;
+  padding: 40px 44px;
+  margin: 24px auto;
+  text-align: center;
+}
+
+.completion-header {
+  font-size: 22px;
+  color: #1a237e;
+  margin-bottom: 24px;
+}
+
+.completion-code-section {
+  margin: 12px 0 24px;
+}
+
+.completion-code-label {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.completion-code-box {
+  display: inline-block;
+  font-family: 'Menlo', 'Consolas', 'Courier New', monospace;
+  font-size: 36px;
+  font-weight: 700;
+  color: #1a237e;
+  background: #fff7d1;
+  border: 2px dashed #f5a623;
+  border-radius: 8px;
+  padding: 14px 28px;
+  letter-spacing: 3px;
+  user-select: all;
+}
+
+.copy-code-btn {
+  display: block;
+  margin: 12px auto 0;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-family: inherit;
+  background: #eeeeee;
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.copy-code-btn:hover {
+  background: #e0e0e0;
+}
+
+.completion-instructions {
+  font-size: 15px;
+  color: #333;
+  line-height: 1.55;
+  margin: 16px 0;
+}
+
+.completion-status {
+  font-size: 13px;
+  font-style: italic;
+  color: #888;
+  margin: 16px 0 12px;
+}
+
+.completion-status-success {
+  color: #2e7d32 !important;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.completion-status-error {
+  color: #c62828 !important;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.completion-nav-row {
+  justify-content: center;
+}
