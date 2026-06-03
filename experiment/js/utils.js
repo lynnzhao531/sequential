@@ -241,29 +241,85 @@
    * v7: Save CSV data to OSF via DataPipe (POST). Returns a Promise.
    * On failure (HTTP error, network error), falls back to a local file
    * download so participant data is never lost.
+   *
+   * v8 (richer logging): when the request fails we now log:
+   *   - the HTTP status + statusText
+   *   - the full response body (text)
+   *   - a short request summary: URL, key names, experimentID, filename,
+   *     CSV column header (1st line), CSV size (bytes + line count)
+   * URL/headers/payload format are unchanged.
    */
   function saveDataToOSF(csvString, filename) {
-    return fetch('https://pipe.jspsych.org/api/data/', {
+    var ENDPOINT = 'https://pipe.jspsych.org/api/data/';
+    var requestBody = JSON.stringify({
+      experimentID: window.DATAPIPE_EXPERIMENT_ID,
+      filename: filename,
+      data: csvString
+    });
+
+    // Build a non-sensitive request summary used for diagnostic logs.
+    function buildRequestSummary() {
+      var firstLine = (csvString || '').split('\n', 1)[0];
+      var lineCount = (csvString || '').split('\n').length;
+      return {
+        url: ENDPOINT,
+        method: 'POST',
+        contentType: 'application/json',
+        bodyKeys: ['experimentID', 'filename', 'data'],
+        experimentID: window.DATAPIPE_EXPERIMENT_ID,
+        filename: filename,
+        dataType: typeof csvString,
+        dataByteLength: (csvString || '').length,
+        dataLineCount: lineCount,
+        csvHeader: firstLine
+      };
+    }
+
+    return fetch(ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': '*/*'
       },
-      body: JSON.stringify({
-        experimentID: window.DATAPIPE_EXPERIMENT_ID,
-        filename: filename,
-        data: csvString
-      })
+      body: requestBody
     }).then(function (response) {
-      if (!response.ok) throw new Error('DataPipe HTTP ' + response.status);
-      // Some DataPipe responses are empty / non-JSON — handle both.
+      // Read the body text once — needed both for success (parse) and failure (log).
       return response.text().then(function (txt) {
+        if (!response.ok) {
+          // Attach the response body + status onto the thrown error so callers
+          // can inspect them. The .catch handler below also logs them.
+          var err = new Error('DataPipe HTTP ' + response.status + ' ' + response.statusText);
+          err.status = response.status;
+          err.statusText = response.statusText;
+          err.responseBody = txt;
+          try { err.responseJson = txt ? JSON.parse(txt) : null; }
+          catch (e) { err.responseJson = null; }
+          throw err;
+        }
         try { return txt ? JSON.parse(txt) : {}; }
         catch (e) { return { raw: txt }; }
       });
     }).catch(function (err) {
-      console.error('DataPipe save failed:', err);
-      // Fallback: trigger local download so data is not lost
+      // ---- v8: Richer error logging ----
+      console.groupCollapsed(
+        '%c[DataPipe] Save failed — %s',
+        'color:#c62828;font-weight:bold;',
+        err && err.message ? err.message : String(err)
+      );
+      console.error('Error object:', err);
+      if (err && err.status !== undefined) {
+        console.error('HTTP status:', err.status, err.statusText || '');
+      }
+      if (err && err.responseBody !== undefined) {
+        console.error('Response body (raw):', err.responseBody);
+      }
+      if (err && err.responseJson) {
+        console.error('Response body (parsed):', err.responseJson);
+      }
+      console.error('Request summary:', buildRequestSummary());
+      console.groupEnd();
+
+      // Fallback: trigger local download so data is not lost.
       try {
         var blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
         var url = URL.createObjectURL(blob);
@@ -274,7 +330,9 @@
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-      } catch (e) { console.warn('Local fallback download also failed', e); }
+      } catch (e) {
+        console.warn('[DataPipe] Local fallback download also failed', e);
+      }
       throw err;
     });
   }

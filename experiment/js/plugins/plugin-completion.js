@@ -123,6 +123,10 @@
       // Skip demographics and completion meta-trials; only include experimental rounds
       if (d.trial_kind === 'demographics' || d.trial_kind === 'completion') return;
       rows.push({
+        // v8: trial_type is the FIRST column. Required by DataPipe validation.
+        // Use a meaningful value (query_type / trial_kind) when available;
+        // fall back to 'behavior' so the field is never empty.
+        trial_type: d.query_type || d.trial_kind || d.trial_type || 'behavior',
         participant_id: state.participantId || '',
         study_id: state.studyId || '',
         session_id: state.sessionId || '',
@@ -165,6 +169,8 @@
   function buildDemographicsRow(state) {
     var d = state.demographics || {};
     return {
+      // v8: trial_type as the FIRST column (required by DataPipe validation).
+      trial_type: 'demographics',
       participant_id: state.participantId || '',
       study_id: state.studyId || '',
       session_id: state.sessionId || '',
