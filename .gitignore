@@ -13,6 +13,7 @@ __pycache__/
 *.v6-backup
 *.v7-backup
 *.v8-backup
+*.v9-backup
 *.optionB-backup
 CLAUDE.md.phase1-backup
 old/
