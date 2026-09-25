@@ -43,45 +43,86 @@
     html += '<p class="completion-status" id="completion-status">Saving your responses…</p>';
 
     html += '<div class="nav-row completion-nav-row">';
-    html +=   '<button class="action-btn next-btn" id="btn-return-prolific">' +
+    // v10.1: disabled (grayed) until the save queue settles or times out —
+    // prevents navigating away while the final POSTs are still in flight.
+    html +=   '<button class="action-btn next-btn" id="btn-return-prolific" disabled>' +
               '← Return to Prolific</button>';
     html += '</div>';
     html += '</div>';
 
     display_element.innerHTML = html;
 
-    // --- Data save (behavior + demographics) ---
+    // --- v10: Final saves via the sequential save queue + honest status ---
     var statusEl = document.getElementById('completion-status');
     var copyBtn = document.getElementById('btn-copy-code');
     var returnBtn = document.getElementById('btn-return-prolific');
 
     var allData = jsPsych.data.get().values();
-    var ts = new Date().toISOString().replace(/[:.]/g, '-');
-    var pid = state.participantId || 'unknown';
+    var pidSafe = window.sanitizeForFilename(state.participantId);
+    // v10.1: sessShort + per-page-load token — a refreshed run never collides
+    // with an earlier run of the same Prolific session.
+    var sess = window.getSessShort() + '_' + (state.loadToken || 'nold');
 
-    // BEHAVIOR rows — every non-demographics, non-completion trial.
-    var behaviorRows = buildBehaviorRows(allData, state);
-    var demoRow = buildDemographicsRow(state);
+    // Build the three files with the SHARED builders (utils.js)
+    var behaviorCSV = window.exportCSV(window.buildBehaviorRows(allData, state));
+    var demoCSV = window.exportCSV([window.buildDemographicsRow(state)]);
+    var clicksCSV = window.exportCSV(window.buildClicksRows(allData, state));
 
-    var behaviorCSV = window.exportCSV(behaviorRows, 'behavior.csv');
-    var demoCSV = window.exportCSV([demoRow], 'demographics.csv');
+    var behaviorFilename = 'behavior_' + pidSafe + '_' + sess + '_final.csv';
+    var demoFilename = 'demographics_' + pidSafe + '_' + sess + '.csv';
+    var clicksFilename = 'clicks_' + pidSafe + '_' + sess + '.csv';
 
-    var behaviorFilename = 'behavior_' + pid + '_' + ts + '.csv';
-    var demoFilename = 'demographics_' + pid + '_' + ts + '.csv';
+    // Enqueue in order: behavior (critical) → demographics (critical) →
+    // clicks (non-critical). The queue sends them one at a time with retry.
+    window.saveQueue.enqueue(behaviorFilename, behaviorCSV, /*critical=*/true);
+    window.saveQueue.enqueue(demoFilename, demoCSV, /*critical=*/true);
+    if (clicksCSV) {
+      window.saveQueue.enqueue(clicksFilename, clicksCSV, /*critical=*/false);
+    }
 
-    // Save both to OSF
-    var saveBehavior = window.saveDataToOSF(behaviorCSV, behaviorFilename);
-    var saveDemo = window.saveDataToOSF(demoCSV, demoFilename);
+    // Drain the queue (final files + any still-pending checkpoints) with a
+    // hard 45-second timeout, then show an HONEST status.
+    var SAVE_TIMEOUT_MS = 45000;
+    var timedOut = false;
+    var timeoutPromise = new Promise(function (resolve) {
+      setTimeout(function () { timedOut = true; resolve('timeout'); }, SAVE_TIMEOUT_MS);
+    });
 
-    Promise.allSettled([saveBehavior, saveDemo]).then(function (results) {
-      var anyFailed = results.some(function (r) { return r.status === 'rejected'; });
-      if (anyFailed) {
-        statusEl.textContent = '⚠ Data save had an issue. Your responses downloaded as a backup file — please contact the researcher.';
-        statusEl.classList.add('completion-status-error');
-      } else {
+    Promise.race([window.saveQueue.allSettled(), timeoutPromise]).then(function () {
+      var criticalItems = window.saveQueue.items.filter(function (it) { return it.critical; });
+      var failedCritical = window.saveQueue.criticalFailures();
+      // On timeout, critical items still pending/sending are NOT confirmed
+      // saved — treat them as failures for status + fallback purposes.
+      var unconfirmedCritical = timedOut
+        ? criticalItems.filter(function (it) {
+            return it.status === 'pending' || it.status === 'sending';
+          })
+        : [];
+      var problemItems = failedCritical.concat(unconfirmedCritical);
+
+      // Non-critical clicks failure: console.warn only (click_count survives
+      // in the behavior CSV — deliberate tradeoff).
+      window.saveQueue.items.forEach(function (it) {
+        if (!it.critical && it.status === 'failed') {
+          console.warn('[completion] non-critical file failed (no download):', it.filename);
+        }
+      });
+
+      if (problemItems.length === 0) {
         statusEl.textContent = '✓ Your data has been saved.';
         statusEl.classList.add('completion-status-success');
+      } else {
+        statusEl.textContent = '⚠ Data save had an issue. Your responses downloaded as a backup file — please contact the researcher.';
+        statusEl.classList.add('completion-status-error');
+        // Fallback download ONLY for the failed/unconfirmed CRITICAL file(s)
+        problemItems.forEach(function (it) {
+          try { window.downloadCSVLocal(it.csvString, it.filename); }
+          catch (e) { console.warn('[completion] fallback download failed for', it.filename, e); }
+        });
       }
+
+      // v10.1: saves settled (or timed out) — the participant may now leave.
+      returnBtn.disabled = false;
     });
 
     // --- Copy code button ---
@@ -116,74 +157,8 @@
     });
   };
 
-  // ---------------------------------------------------------------------------
-  function buildBehaviorRows(allData, state) {
-    var rows = [];
-    allData.forEach(function (d, idx) {
-      // Skip demographics and completion meta-trials; only include experimental rounds
-      if (d.trial_kind === 'demographics' || d.trial_kind === 'completion') return;
-      rows.push({
-        // v8: trial_type is the FIRST column. Required by DataPipe validation.
-        // Use a meaningful value (query_type / trial_kind) when available;
-        // fall back to 'behavior' so the field is never empty.
-        trial_type: d.query_type || d.trial_kind || d.trial_type || 'behavior',
-        participant_id: state.participantId || '',
-        study_id: state.studyId || '',
-        session_id: state.sessionId || '',
-        id_source: state.idSource || '',
-        trial_index: idx,
-        trial_kind: d.trial_kind || d.trial_type || '',
-        phase: d.phase || state.phase || '',
-        landscape_id: state.landscapeId || '',
-        round: d.round !== undefined ? d.round : '',
-        query_type: d.query_type || '',
-        orientation: d.orientation || '',
-        position: d.position !== undefined ? d.position : '',
-        x: d.x !== undefined ? d.x : '',
-        y: d.y !== undefined ? d.y : '',
-        x1: d.x1 !== undefined ? d.x1 : '',
-        y1: d.y1 !== undefined ? d.y1 : '',
-        x2: d.x2 !== undefined ? d.x2 : '',
-        y2: d.y2 !== undefined ? d.y2 : '',
-        area: d.area !== undefined ? d.area : '',
-        query_value: d.query_value !== undefined ? d.query_value : '',
-        feedback_value: d.feedback_value !== undefined ? d.feedback_value : '',
-        guess_x: d.guess_x !== undefined ? d.guess_x : '',
-        guess_y: d.guess_y !== undefined ? d.guess_y : '',
-        guess_value: d.guess_value !== undefined ? d.guess_value : '',
-        is_final: d.is_final !== undefined ? d.is_final : '',
-        choice: d.choice || '',
-        round_at_decision: d.round_at_decision !== undefined ? d.round_at_decision : '',
-        correct: d.correct !== undefined ? d.correct : '',
-        rt: d.rt !== undefined ? d.rt : '',
-        page_time_ms: d.page_time_ms !== undefined ? d.page_time_ms : '',
-        time_to_first_click_ms: d.time_to_first_click_ms !== undefined ? d.time_to_first_click_ms : '',
-        click_count: d.click_count !== undefined ? d.click_count : '',
-        all_clicks: d.all_clicks ? JSON.stringify(d.all_clicks) : '',
-        timestamp: new Date().toISOString()
-      });
-    });
-    return rows;
-  }
-
-  function buildDemographicsRow(state) {
-    var d = state.demographics || {};
-    return {
-      // v8: trial_type as the FIRST column (required by DataPipe validation).
-      trial_type: 'demographics',
-      participant_id: state.participantId || '',
-      study_id: state.studyId || '',
-      session_id: state.sessionId || '',
-      id_source: state.idSource || '',
-      gender: d.gender || '',
-      age: (d.age !== undefined ? d.age : ''),
-      education: d.education || '',
-      instruction_clarity: (d.instruction_clarity !== undefined ? d.instruction_clarity : ''),
-      fun_rating: (d.fun_rating !== undefined ? d.fun_rating : ''),
-      comments: d.comments || '',
-      completed_at: new Date().toISOString()
-    };
-  }
+  // v10: buildBehaviorRows / buildDemographicsRow moved to utils.js
+  // (shared with checkpoint saving in main.js).
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, function (c) {

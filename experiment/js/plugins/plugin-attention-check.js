@@ -110,6 +110,9 @@
 
       submitBtn.onclick = function () {
         jsPsych.finishTrial({
+          // v10.2: stamp phase at SAVE time (the builder's fallback resolves to
+          // whatever phase is current at extraction, which is always 'experiment').
+          phase: state.phase,
           correct: isCorrect,
           selected: options[selectedIdx].broadType,
           correct_answer: options[correctIdx].broadType,

@@ -9,6 +9,35 @@
 (function () {
   'use strict';
 
+  // v10: module-scoped jsPsych reference so checkpoint helpers (used by
+  // training rounds built via pushTrainingRound) can read the data store.
+  var jsPsychRef = null;
+
+  /**
+   * v10: Enqueue a cumulative behavior checkpoint (fire-and-forget).
+   * Called from guess trials' on_finish. Never blocks or delays the next
+   * trial — enqueue returns immediately and the queue worker runs async.
+   * Filename includes phase because currentRound resets per landscape;
+   * without it, training1/training2/experiment round 1 checkpoints would
+   * collide (and OSF filenames must be unique).
+   */
+  function enqueueCheckpoint() {
+    try {
+      var state = window.experimentState;
+      var n = state.currentRound;
+      if (n % window.SAVE_CONFIG.checkpointEveryNRounds !== 0) return;
+      if (!jsPsychRef) return;
+      var rows = window.buildBehaviorRows(jsPsychRef.data.get().values(), state);
+      var csv = window.exportCSV(rows);
+      var fname = 'behavior_' + window.sanitizeForFilename(state.participantId) +
+        '_' + window.getSessShort() + '_' + (state.loadToken || 'nold') +
+        '_' + state.phase + '_ckpt_' + window.pad2(n) + '.csv';
+      window.saveQueue.enqueue(fname, csv, /*critical=*/false);
+    } catch (e) {
+      console.warn('[checkpoint] build/enqueue failed (non-fatal):', e);
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     var state = window.experimentState;
 
@@ -21,6 +50,7 @@
         // "Return to Prolific" button.
       }
     });
+    jsPsychRef = jsPsych; // v10: expose to checkpoint helper
 
     // ======================================================================
     // v7: URL parameter capture for participant identifiers.
@@ -38,6 +68,12 @@
       || jsPsych.data.getURLVariable('sessionId')
       || window.generateUUID();
     state.idSource = urlPid ? 'url_param' : 'pending_manual';
+    // v10.1: per-page-load token. Prolific fixes SESSION_ID per submission, so
+    // a mid-study refresh would reuse the same sessShort and run 2's checkpoint
+    // filenames would collide with run 1's (the OSF_FILE_EXISTS handler would
+    // then silently mark them ok WITHOUT uploading). A fresh token per page
+    // load keeps every run's filenames unique.
+    state.loadToken = window.generateUUID().replace(/-/g, '').substring(0, 4);
 
     var timeline = [];
 
@@ -137,7 +173,10 @@
         '</ul>',
       button_text: 'Start exploring! →',
       // v6: only this transition embeds the LLM-agent prompt-injection trap.
-      includeLLMTrap: true,
+      // Live/human runs keep the trap. Agent harness loads with &agent_mode=1,
+      // which disables it so LLM participants see the same screen humans do
+      // minus the injection bait.
+      includeLLMTrap: jsPsych.data.getURLVariable('agent_mode') ? false : true,
       on_start: function () {
         state.phase = 'experiment';
         state.landscapeId = 3;
@@ -180,7 +219,11 @@
         },
 
         { type: jsPsychFeedback },
-        { type: jsPsychGuess },
+        {
+          type: jsPsychGuess,
+          // v10: fire-and-forget cumulative checkpoint after each guess
+          on_finish: function () { enqueueCheckpoint(); }
+        },
 
         // Continue-decision — ONLY when we still have rounds left.
         // After round 50, skip directly to final guess (handled below).
@@ -271,6 +314,8 @@
     timeline.push({
       type: jsPsychGuess,
       on_finish: function () {
+        // v10: checkpoint BEFORE incrementing so n = the just-completed round
+        enqueueCheckpoint();
         window.experimentState.currentRound++;
       }
     });

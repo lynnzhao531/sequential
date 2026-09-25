@@ -173,6 +173,9 @@
       };
       renderer.disableMouseTracking();
       var trialData = {
+        // v10.2: stamp phase at SAVE time (the builder's fallback resolves to
+        // whatever phase is current at extraction, which is always 'experiment').
+        phase: state.phase,
         query_type: 'rectangle',
         x1: x1,
         y1: y1,

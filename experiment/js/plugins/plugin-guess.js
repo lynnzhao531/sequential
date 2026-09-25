@@ -141,6 +141,10 @@
       renderer.disableMouseTracking();
       var trialData = {
         trial_kind: 'guess',
+        // v10.2: stamp the phase at SAVE time. The builder's fallback uses
+        // state.phase, which is whatever phase is current at extraction time
+        // (always 'experiment'), so training guesses were mislabelled.
+        phase: state.phase,
         guess_x: selectedPoint.x,
         guess_y: selectedPoint.y,
         guess_value: Math.round(guessValue * 10) / 10,

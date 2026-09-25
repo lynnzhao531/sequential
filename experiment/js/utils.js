@@ -249,20 +249,64 @@
    *     CSV column header (1st line), CSV size (bytes + line count)
    * URL/headers/payload format are unchanged.
    */
-  function saveDataToOSF(csvString, filename) {
+  /**
+   * v10: Core DataPipe POST. Same URL/headers/body keys as always.
+   * Throws a rich Error (status, statusText, responseBody, responseJson)
+   * on any non-2xx. NO fallback download here — callers decide that.
+   */
+  function postToDataPipe(csvString, filename) {
     var ENDPOINT = 'https://pipe.jspsych.org/api/data/';
-    var requestBody = JSON.stringify({
-      experimentID: window.DATAPIPE_EXPERIMENT_ID,
-      filename: filename,
-      data: csvString
+    return fetch(ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': '*/*'
+      },
+      body: JSON.stringify({
+        experimentID: window.DATAPIPE_EXPERIMENT_ID,
+        filename: filename,
+        data: csvString
+      })
+    }).then(function (response) {
+      return response.text().then(function (txt) {
+        if (!response.ok) {
+          var err = new Error('DataPipe HTTP ' + response.status + ' ' + response.statusText);
+          err.status = response.status;
+          err.statusText = response.statusText;
+          err.responseBody = txt;
+          try { err.responseJson = txt ? JSON.parse(txt) : null; }
+          catch (e) { err.responseJson = null; }
+          throw err;
+        }
+        try { return txt ? JSON.parse(txt) : {}; }
+        catch (e) { return { raw: txt }; }
+      });
     });
+  }
+
+  /**
+   * v10: Local CSV download (used ONLY as fallback for failed CRITICAL files).
+   */
+  function downloadCSVLocal(csvString, filename) {
+    var blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function saveDataToOSF(csvString, filename) {
 
     // Build a non-sensitive request summary used for diagnostic logs.
     function buildRequestSummary() {
       var firstLine = (csvString || '').split('\n', 1)[0];
       var lineCount = (csvString || '').split('\n').length;
       return {
-        url: ENDPOINT,
+        url: 'https://pipe.jspsych.org/api/data/',
         method: 'POST',
         contentType: 'application/json',
         bodyKeys: ['experimentID', 'filename', 'data'],
@@ -275,31 +319,7 @@
       };
     }
 
-    return fetch(ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': '*/*'
-      },
-      body: requestBody
-    }).then(function (response) {
-      // Read the body text once — needed both for success (parse) and failure (log).
-      return response.text().then(function (txt) {
-        if (!response.ok) {
-          // Attach the response body + status onto the thrown error so callers
-          // can inspect them. The .catch handler below also logs them.
-          var err = new Error('DataPipe HTTP ' + response.status + ' ' + response.statusText);
-          err.status = response.status;
-          err.statusText = response.statusText;
-          err.responseBody = txt;
-          try { err.responseJson = txt ? JSON.parse(txt) : null; }
-          catch (e) { err.responseJson = null; }
-          throw err;
-        }
-        try { return txt ? JSON.parse(txt) : {}; }
-        catch (e) { return { raw: txt }; }
-      });
-    }).catch(function (err) {
+    return postToDataPipe(csvString, filename).catch(function (err) {
       // ---- v8: Richer error logging ----
       console.groupCollapsed(
         '%c[DataPipe] Save failed — %s',
@@ -321,15 +341,7 @@
 
       // Fallback: trigger local download so data is not lost.
       try {
-        var blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        downloadCSVLocal(csvString, filename);
       } catch (e) {
         console.warn('[DataPipe] Local fallback download also failed', e);
       }
@@ -343,6 +355,263 @@
    */
   function saveData(csvString, filename) {
     return saveDataToOSF(csvString, filename);
+  }
+
+  // ===========================================================================
+  // v10: INCREMENTAL CHECKPOINT SAVING — sequential queue with retry/backoff
+  // ===========================================================================
+
+  window.SAVE_CONFIG = {
+    checkpointEveryNRounds: 1,   // raise to 2-3 if rate limits ever appear
+    maxRetries: 3,
+    retryDelaysMs: [1000, 2000, 4000],
+    interRequestDelayMs: 500
+  };
+
+  function _sleep(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
+  /**
+   * Sequential save queue. Items are POSTed to DataPipe ONE AT A TIME
+   * (never parallel), with interRequestDelayMs between requests and up to
+   * maxRetries retries per item using retryDelaysMs backoff.
+   *
+   * Checkpoint items (critical=false) NEVER trigger a fallback download —
+   * fallback downloads are reserved for CRITICAL files at completion and
+   * are triggered by the completion plugin via criticalFailures().
+   *
+   * Duplicate handling (probed live): DataPipe returns
+   *   400 {"error":"OSF_FILE_EXISTS","message":"The OSF file already exists..."}
+   * when a filename was already saved. If we see this on any attempt, the
+   * file IS on OSF (an earlier attempt landed), so we mark the item 'ok'.
+   */
+  window.saveQueue = {
+    items: [],        // {filename, csvString, critical, status, attempts, lastError}
+    processing: false,
+    _waiters: [],
+
+    enqueue: function (filename, csvString, critical) {
+      if (!csvString) {
+        console.warn('[saveQueue] skipping empty CSV for', filename);
+        return;
+      }
+      this.items.push({
+        filename: filename,
+        csvString: csvString,
+        critical: !!critical,
+        status: 'pending',
+        attempts: 0,
+        lastError: null
+      });
+      console.log('[saveQueue] enqueued', filename,
+        '(' + csvString.length + ' bytes, critical=' + !!critical + ')');
+      this._kick();
+    },
+
+    _kick: function () {
+      if (this.processing) return;
+      this.processing = true;
+      var self = this;
+      (function loop() {
+        var item = null;
+        for (var i = 0; i < self.items.length; i++) {
+          if (self.items[i].status === 'pending') { item = self.items[i]; break; }
+        }
+        if (!item) {
+          self.processing = false;
+          self._notify();
+          // Items may have been enqueued while we were finishing up
+          if (self.items.some(function (it) { return it.status === 'pending'; })) {
+            self._kick();
+          }
+          return;
+        }
+        item.status = 'sending';
+        self._sendWithRetry(item).then(function () {
+          return _sleep(window.SAVE_CONFIG.interRequestDelayMs);
+        }).then(loop, loop);
+      })();
+    },
+
+    _sendWithRetry: function (item) {
+      var cfg = window.SAVE_CONFIG;
+      var attempt = 0;
+      function tryOnce() {
+        item.attempts = attempt + 1;
+        return postToDataPipe(item.csvString, item.filename).then(function (res) {
+          item.status = 'ok';
+          console.log('[saveQueue] OK', item.filename,
+            '(attempt ' + item.attempts + ')', res);
+        }, function (err) {
+          // Duplicate filename → an earlier attempt landed on OSF; treat as ok
+          if (err && err.responseJson && err.responseJson.error === 'OSF_FILE_EXISTS') {
+            item.status = 'ok';
+            console.log('[saveQueue] OK (OSF_FILE_EXISTS — earlier attempt landed)',
+              item.filename, '(attempt ' + item.attempts + ')');
+            return;
+          }
+          item.lastError = err;
+          console.warn('[saveQueue] attempt ' + item.attempts + ' failed for',
+            item.filename, '| status:', err && err.status,
+            '| body:', (err && err.responseBody) || (err && err.message));
+          if (attempt < cfg.maxRetries) {
+            var delay = cfg.retryDelaysMs[Math.min(attempt, cfg.retryDelaysMs.length - 1)];
+            attempt++;
+            return _sleep(delay).then(tryOnce);
+          }
+          item.status = 'failed';
+          console.error('[saveQueue] FAILED after ' + item.attempts + ' attempts:',
+            item.filename);
+        });
+      }
+      return tryOnce();
+    },
+
+    /**
+     * Resolves when no items are pending or sending. Resolves with a snapshot
+     * of all items.
+     */
+    allSettled: function () {
+      var self = this;
+      var busy = self.items.some(function (it) {
+        return it.status === 'pending' || it.status === 'sending';
+      });
+      if (!busy) return Promise.resolve(self.items.slice());
+      return new Promise(function (resolve) { self._waiters.push(resolve); });
+    },
+
+    _notify: function () {
+      var busy = this.items.some(function (it) {
+        return it.status === 'pending' || it.status === 'sending';
+      });
+      if (busy) return;
+      var waiters = this._waiters.splice(0);
+      var snapshot = this.items.slice();
+      waiters.forEach(function (w) { w(snapshot); });
+    },
+
+    criticalFailures: function () {
+      return this.items.filter(function (it) {
+        return it.critical && it.status === 'failed';
+      });
+    }
+  };
+
+  // ===========================================================================
+  // v10: SHARED ROW BUILDERS (moved from plugin-completion.js so checkpoint
+  // code and the completion plugin use the SAME builders)
+  // ===========================================================================
+
+  /**
+   * Behavior rows — one per non-demographics/non-completion trial.
+   * v10: all_clicks column REMOVED (isolated into buildClicksRows so behavior
+   * payloads stay small). click_count / page_time_ms / time_to_first_click_ms
+   * and all other columns retained.
+   */
+  function buildBehaviorRows(allData, state) {
+    var rows = [];
+    allData.forEach(function (d, idx) {
+      // Skip demographics and completion meta-trials; only include experimental rounds
+      if (d.trial_kind === 'demographics' || d.trial_kind === 'completion') return;
+      rows.push({
+        trial_type: d.query_type || d.trial_kind || d.trial_type || 'behavior',
+        participant_id: state.participantId || '',
+        study_id: state.studyId || '',
+        session_id: state.sessionId || '',
+        id_source: state.idSource || '',
+        trial_index: idx,
+        trial_kind: d.trial_kind || d.trial_type || '',
+        phase: d.phase || state.phase || '',
+        landscape_id: state.landscapeId || '',
+        round: d.round !== undefined ? d.round : '',
+        query_type: d.query_type || '',
+        orientation: d.orientation || '',
+        position: d.position !== undefined ? d.position : '',
+        x: d.x !== undefined ? d.x : '',
+        y: d.y !== undefined ? d.y : '',
+        x1: d.x1 !== undefined ? d.x1 : '',
+        y1: d.y1 !== undefined ? d.y1 : '',
+        x2: d.x2 !== undefined ? d.x2 : '',
+        y2: d.y2 !== undefined ? d.y2 : '',
+        area: d.area !== undefined ? d.area : '',
+        query_value: d.query_value !== undefined ? d.query_value : '',
+        feedback_value: d.feedback_value !== undefined ? d.feedback_value : '',
+        guess_x: d.guess_x !== undefined ? d.guess_x : '',
+        guess_y: d.guess_y !== undefined ? d.guess_y : '',
+        guess_value: d.guess_value !== undefined ? d.guess_value : '',
+        is_final: d.is_final !== undefined ? d.is_final : '',
+        choice: d.choice || '',
+        round_at_decision: d.round_at_decision !== undefined ? d.round_at_decision : '',
+        correct: d.correct !== undefined ? d.correct : '',
+        rt: d.rt !== undefined ? d.rt : '',
+        page_time_ms: d.page_time_ms !== undefined ? d.page_time_ms : '',
+        time_to_first_click_ms: d.time_to_first_click_ms !== undefined ? d.time_to_first_click_ms : '',
+        click_count: d.click_count !== undefined ? d.click_count : '',
+        timestamp: new Date().toISOString()
+      });
+    });
+    return rows;
+  }
+
+  /**
+   * Clicks rows — one per trial that has all_clicks data. Isolates the only
+   * large field into its own file.
+   */
+  function buildClicksRows(allData, state) {
+    var rows = [];
+    allData.forEach(function (d, idx) {
+      if (!d.all_clicks || d.all_clicks.length === 0) return;
+      rows.push({
+        trial_type: 'clicks',
+        participant_id: state.participantId || '',
+        study_id: state.studyId || '',
+        session_id: state.sessionId || '',
+        trial_index: idx,
+        phase: d.phase || '',
+        round: d.round !== undefined ? d.round : '',
+        all_clicks: JSON.stringify(d.all_clicks)
+      });
+    });
+    return rows;
+  }
+
+  function buildDemographicsRow(state) {
+    var d = state.demographics || {};
+    return {
+      trial_type: 'demographics',
+      participant_id: state.participantId || '',
+      study_id: state.studyId || '',
+      session_id: state.sessionId || '',
+      id_source: state.idSource || '',
+      gender: d.gender || '',
+      age: (d.age !== undefined ? d.age : ''),
+      education: d.education || '',
+      instruction_clarity: (d.instruction_clarity !== undefined ? d.instruction_clarity : ''),
+      fun_rating: (d.fun_rating !== undefined ? d.fun_rating : ''),
+      comments: d.comments || '',
+      completed_at: new Date().toISOString()
+    };
+  }
+
+  /**
+   * Short stable per-session token for filenames (first 8 chars of sessionId,
+   * sanitized). Groups files by session; never collides across sessions.
+   */
+  function getSessShort() {
+    var s = String((window.experimentState && window.experimentState.sessionId) || 'nosess');
+    s = s.replace(/[^A-Za-z0-9_-]/g, '');
+    return s.substring(0, 8) || 'nosess';
+  }
+
+  /** Sanitize an ID for use inside a filename. */
+  function sanitizeForFilename(id) {
+    return String(id || 'unknown').replace(/[^A-Za-z0-9_-]/g, '');
+  }
+
+  /** Zero-pad to 2 digits. */
+  function pad2(n) {
+    return (n < 10 ? '0' : '') + n;
   }
 
   /**
@@ -406,6 +675,14 @@
   window.packRectanglesIntoGroups = packRectanglesIntoGroups;
   window.saveData = saveData;
   window.saveDataToOSF = saveDataToOSF;
+  window.postToDataPipe = postToDataPipe;
+  window.downloadCSVLocal = downloadCSVLocal;
+  window.buildBehaviorRows = buildBehaviorRows;
+  window.buildClicksRows = buildClicksRows;
+  window.buildDemographicsRow = buildDemographicsRow;
+  window.getSessShort = getSessShort;
+  window.sanitizeForFilename = sanitizeForFilename;
+  window.pad2 = pad2;
   window.generateUUID = generateUUID;
   window.exportCSV = exportCSV;
   window.formatQueryLabel = formatQueryLabel;

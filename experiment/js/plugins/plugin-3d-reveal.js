@@ -78,7 +78,7 @@
       var c = document.getElementById('reveal-canvas').getContext('2d');
       c.fillText('3D reveal unavailable (Three.js not loaded)', 10, 20);
       document.getElementById('btn-next').addEventListener('click', function () {
-        jsPsych.finishTrial({ trial_kind: '3d-reveal', error: 'three.js not loaded' });
+        jsPsych.finishTrial({ trial_kind: '3d-reveal', phase: state.phase, error: 'three.js not loaded' });
       });
       return;
     }
@@ -255,6 +255,9 @@
     document.getElementById('btn-next').addEventListener('click', function () {
       if (rafId) cancelAnimationFrame(rafId);
       jsPsych.finishTrial({
+        // v10.2: stamp phase at SAVE time (the builder's fallback resolves to
+        // whatever phase is current at extraction, which is always 'experiment').
+        phase: state.phase,
         trial_kind: '3d-reveal',
         color_scheme: trial.colorScheme,
         time_spent_viewing: Math.round(performance.now() - startTime),

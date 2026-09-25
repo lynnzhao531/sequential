@@ -101,6 +101,9 @@
       state.currentRound++;
       renderer.disableMouseTracking();
       var trialData = {
+        // v10.2: stamp phase at SAVE time (the builder's fallback resolves to
+        // whatever phase is current at extraction, which is always 'experiment').
+        phase: state.phase,
         trial_kind: 'continue-decision',
         choice: 'continue',
         round_at_decision: roundJustCompleted,
@@ -118,6 +121,9 @@
         state.quitRequested = true;
         renderer.disableMouseTracking();
         var trialData = {
+          // v10.2: stamp phase at SAVE time (the builder's fallback resolves to
+          // whatever phase is current at extraction, which is always 'experiment').
+          phase: state.phase,
           trial_kind: 'continue-decision',
           choice: 'final_guess',
           round_at_decision: roundJustCompleted,

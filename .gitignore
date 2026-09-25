@@ -14,8 +14,16 @@ __pycache__/
 *.v7-backup
 *.v8-backup
 *.v9-backup
+*.v10-backup
+*.agentmode-backup
+tests/
+node_modules/
 *.optionB-backup
 CLAUDE.md.phase1-backup
 old/
 atlas
 .claude/
+
+# Agent-run harness (LLM plays the game)
+agents/
+*.prebatch-backup

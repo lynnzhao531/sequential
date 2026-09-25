@@ -111,6 +111,9 @@
     document.getElementById('btn-next').addEventListener('click', function () {
       pageTracker.registerClick();
       var trialData = {
+        // v10.2: stamp phase at SAVE time (the builder's fallback resolves to
+        // whatever phase is current at extraction, which is always 'experiment').
+        phase: state.phase,
         trial_kind: 'feedback',
         query_type: result.type,
         feedback_value: Math.round(result.value * 10) / 10,
