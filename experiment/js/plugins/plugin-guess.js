@@ -145,6 +145,8 @@
         // state.phase, which is whatever phase is current at extraction time
         // (always 'experiment'), so training guesses were mislabelled.
         phase: state.phase,
+        // v12: stamp round at SAVE time too (was select-query only).
+        round: state.currentRound,
         guess_x: selectedPoint.x,
         guess_y: selectedPoint.y,
         guess_value: Math.round(guessValue * 10) / 10,

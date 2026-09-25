@@ -24,6 +24,7 @@
     prefixSum: null,
     gridMeanRichness: 0,
     peakLocation: { x: 0, y: 0 },
+    peakValue: 0,
 
     queryHistory: [],          // [{ round, type, coords, value, area, orientation }]
     guessHistory: [],          // [{ round, x, y, value }]
@@ -35,6 +36,11 @@
     trainingForcedType: null,         // if set, select-query is locked to this type
     trainingForcedOrientation: null,  // 'horizontal' | 'vertical' (only for line training)
     quitRequested: false,
+
+    // v12: per-phase ground truth {training1:{peak_x,peak_y,peak_value}, ...}.
+    // Accumulates across landscapes; deliberately NOT cleared by
+    // resetForNewLandscape so every row can look up its own phase's truth.
+    groundTruth: {},
 
     // Extra records
     demographics: null,

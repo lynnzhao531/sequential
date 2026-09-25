@@ -104,6 +104,8 @@
         // v10.2: stamp phase at SAVE time (the builder's fallback resolves to
         // whatever phase is current at extraction, which is always 'experiment').
         phase: state.phase,
+        // v12: stamp round at SAVE time too (was select-query only).
+        round: state.currentRound,
         trial_kind: 'continue-decision',
         choice: 'continue',
         round_at_decision: roundJustCompleted,
@@ -124,6 +126,8 @@
           // v10.2: stamp phase at SAVE time (the builder's fallback resolves to
           // whatever phase is current at extraction, which is always 'experiment').
           phase: state.phase,
+          // v12: stamp round at SAVE time too (was select-query only).
+          round: state.currentRound,
           trial_kind: 'continue-decision',
           choice: 'final_guess',
           round_at_decision: roundJustCompleted,

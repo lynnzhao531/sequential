@@ -114,6 +114,8 @@
         // v10.2: stamp phase at SAVE time (the builder's fallback resolves to
         // whatever phase is current at extraction, which is always 'experiment').
         phase: state.phase,
+        // v12: stamp round at SAVE time too (was select-query only).
+        round: state.currentRound,
         trial_kind: 'feedback',
         query_type: result.type,
         feedback_value: Math.round(result.value * 10) / 10,

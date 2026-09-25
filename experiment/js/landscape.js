@@ -105,6 +105,31 @@
     var totalSum = prefixSum[W][H];
     var gridMean = totalSum / (W * H);
 
+    // v12: peakLocation must be the argmax of the FINAL scored grid, not the
+    // Gaussian centre parameter. The scored grid adds per-cell N(0, noiseSd)
+    // and clamps to [0,100]; near the centre the Gaussian is nearly flat, so
+    // noise moves the true maximum several cells away from (cx, cy). With
+    // amplitude === the clamp ceiling, many cells also tie at exactly 100 —
+    // among ties we take the one nearest the Gaussian centre, which is
+    // deterministic and directionally unbiased.
+    var bestVal = -Infinity, bestX = 0, bestY = 0, bestDist = Infinity;
+    var ccx = landscape.params.cx, ccy = landscape.params.cy;
+    for (var ax = 0; ax < W; ax++) {
+      for (var ay = 0; ay < H; ay++) {
+        var av = grid[ax][ay];
+        if (av > bestVal) {
+          bestVal = av; bestX = ax; bestY = ay;
+          bestDist = Math.sqrt((ax - ccx) * (ax - ccx) + (ay - ccy) * (ay - ccy));
+        } else if (av === bestVal) {
+          var ad = Math.sqrt((ax - ccx) * (ax - ccx) + (ay - ccy) * (ay - ccy));
+          if (ad < bestDist) { bestX = ax; bestY = ay; bestDist = ad; }
+        }
+      }
+    }
+    landscape.peakLocation = { x: bestX, y: bestY };
+    landscape.peakValue = bestVal;
+    landscape.gaussianCenter = { x: ccx, y: ccy };   // kept for reference
+
     // Store on experimentState
     var state = window.experimentState;
     if (state) {
@@ -114,6 +139,16 @@
       state.prefixSum = prefixSum;
       state.gridMeanRichness = gridMean;
       state.peakLocation = landscape.peakLocation;
+      state.peakValue = landscape.peakValue;
+      // v12: per-phase ground truth, keyed by the phase active at generation.
+      // Never reset between landscapes — it accumulates all three.
+      if (state.groundTruth && state.phase) {
+        state.groundTruth[state.phase] = {
+          peak_x: landscape.peakLocation.x,
+          peak_y: landscape.peakLocation.y,
+          peak_value: Math.round(landscape.peakValue * 100) / 100
+        };
+      }
     }
   }
 

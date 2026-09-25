@@ -509,6 +509,13 @@
    * payloads stay small). click_count / page_time_ms / time_to_first_click_ms
    * and all other columns retained.
    */
+  // v12: safe lookup into state.groundTruth for a row's own phase.
+  function gt(state, phase, key) {
+    if (!phase || !state || !state.groundTruth) return '';
+    var g = state.groundTruth[phase];
+    return (g && g[key] !== undefined) ? g[key] : '';
+  }
+
   // v11: fixed phase -> landscape id mapping (mirrors main.js assignments).
   var PHASE_TO_LANDSCAPE_ID = { training1: 1, training2: 2, experiment: 3 };
 
@@ -531,6 +538,12 @@
         // Fixed design mapping, matching main.js: training1->1, training2->2,
         // experiment->3. A row that never stamped a phase gets '' — never guess.
         landscape_id: PHASE_TO_LANDSCAPE_ID[d.phase] || '',
+        // v12: ground truth for the landscape THIS row belongs to, looked up by
+        // the row's own stamped phase (same rule as landscape_id — never the
+        // extraction-time state). Unstamped meta rows get ''.
+        peak_x: gt(state, d.phase, 'peak_x'),
+        peak_y: gt(state, d.phase, 'peak_y'),
+        peak_value: gt(state, d.phase, 'peak_value'),
         round: d.round !== undefined ? d.round : '',
         query_type: d.query_type || '',
         orientation: d.orientation || '',
