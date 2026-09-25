@@ -38,6 +38,41 @@
     }
   }
 
+  /**
+   * v13: one ground-truth file per session, enqueued once the EXPERIMENT
+   * landscape exists (so all three grids are in memory). Non-critical: it
+   * never affects the completion status logic or the participant flow.
+   * `trial_type` is required by the DataPipe validation rules.
+   */
+  function enqueueLandscapeFile() {
+    try {
+      var state = window.experimentState;
+      var phases = {};
+      ['training1', 'training2', 'experiment'].forEach(function (ph) {
+        var g = state.groundTruth[ph];
+        var grid = state.gridsByPhase[ph];
+        if (!g || !grid) return;
+        phases[ph] = {
+          peak_x: g.peak_x, peak_y: g.peak_y, peak_value: g.peak_value,
+          avg: g.avg, params: g.params, grid: grid
+        };
+      });
+      var payload = {
+        trial_type: 'landscape',          // REQUIRED by DataPipe validation
+        version: 'v13',
+        participant_id: state.participantId,
+        session_id: state.sessionId,
+        load_token: state.loadToken,
+        phases: phases
+      };
+      var fname = 'landscape_' + window.sanitizeForFilename(state.participantId) +
+        '_' + window.getSessShort() + '_' + (state.loadToken || 'nold') + '.json';
+      window.saveQueue.enqueue(fname, JSON.stringify(payload), /*critical=*/false);
+    } catch (e) {
+      console.warn('[landscape-file] build/enqueue failed (non-fatal):', e);
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     var state = window.experimentState;
 
@@ -185,6 +220,8 @@
         state.trainingForcedOrientation = null;
         // Experiment: default ranges
         window.Landscape.generate();
+        // v13: all three grids now exist — ship the ground-truth file.
+        enqueueLandscapeFile();
       }
     });
 

@@ -13,7 +13,10 @@
   var CANVAS_HEIGHT = GRID_HEIGHT * CELL_SIZE; // 400
 
   // Landscape generation defaults
-  var DEFAULT_AMPLITUDE = 100;
+  var DEFAULT_AMPLITUDE = 90;   // v13: low enough that the [0,100] clamp NEVER engages,
+                                // so the scored grid has a unique argmax. (95 still clamped
+                                // in 7.4% of landscapes: max-of-5000-noisy-cells sits ~3.5sd
+                                // above amplitude, not ~1sd.)
   var DEFAULT_NOISE_SD = 2;
 
   // Experiment defaults
@@ -544,6 +547,8 @@
         peak_x: gt(state, d.phase, 'peak_x'),
         peak_y: gt(state, d.phase, 'peak_y'),
         peak_value: gt(state, d.phase, 'peak_value'),
+        // v13: mean of that phase's scored grid (same phase-keyed rule).
+        map_average: gt(state, d.phase, 'avg'),
         round: d.round !== undefined ? d.round : '',
         query_type: d.query_type || '',
         orientation: d.orientation || '',

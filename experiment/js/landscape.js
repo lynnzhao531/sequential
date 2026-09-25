@@ -146,8 +146,30 @@
         state.groundTruth[state.phase] = {
           peak_x: landscape.peakLocation.x,
           peak_y: landscape.peakLocation.y,
-          peak_value: Math.round(landscape.peakValue * 100) / 100
+          peak_value: Math.round(landscape.peakValue * 100) / 100,
+          // v13: mean of the FINAL scored grid, and the generation params.
+          avg: Math.round(gridMean * 100) / 100,
+          params: {
+            cx: landscape.params.cx, cy: landscape.params.cy,
+            sx: Math.round(landscape.params.sx * 1000) / 1000,
+            sy: Math.round(landscape.params.sy * 1000) / 1000,
+            amplitude: landscape.params.amplitude,
+            noiseSd: landscape.params.noiseSd
+          }
         };
+      }
+      // v13: keep the final scored grid per phase (2dp) so a full ground-truth
+      // file can be written once all three landscapes exist. Not cleared by
+      // resetForNewLandscape.
+      if (state.gridsByPhase && state.phase) {
+        var snap = new Array(W);
+        for (var gx2 = 0; gx2 < W; gx2++) {
+          snap[gx2] = new Array(H);
+          for (var gy2 = 0; gy2 < H; gy2++) {
+            snap[gx2][gy2] = Math.round(grid[gx2][gy2] * 100) / 100;
+          }
+        }
+        state.gridsByPhase[state.phase] = snap;
       }
     }
   }

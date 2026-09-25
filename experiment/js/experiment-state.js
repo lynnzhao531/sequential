@@ -41,6 +41,9 @@
     // Accumulates across landscapes; deliberately NOT cleared by
     // resetForNewLandscape so every row can look up its own phase's truth.
     groundTruth: {},
+    // v13: final scored grid per phase, kept in memory for the landscape
+    // file. Also NOT cleared by resetForNewLandscape.
+    gridsByPhase: {},
 
     // Extra records
     demographics: null,
