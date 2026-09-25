@@ -509,6 +509,9 @@
    * payloads stay small). click_count / page_time_ms / time_to_first_click_ms
    * and all other columns retained.
    */
+  // v11: fixed phase -> landscape id mapping (mirrors main.js assignments).
+  var PHASE_TO_LANDSCAPE_ID = { training1: 1, training2: 2, experiment: 3 };
+
   function buildBehaviorRows(allData, state) {
     var rows = [];
     allData.forEach(function (d, idx) {
@@ -523,7 +526,11 @@
         trial_index: idx,
         trial_kind: d.trial_kind || d.trial_type || '',
         phase: d.phase || state.phase || '',
-        landscape_id: state.landscapeId || '',
+        // v11: derive from the row's OWN stamped phase, not from state at
+        // extraction time (which is always the last landscape, id 3).
+        // Fixed design mapping, matching main.js: training1->1, training2->2,
+        // experiment->3. A row that never stamped a phase gets '' — never guess.
+        landscape_id: PHASE_TO_LANDSCAPE_ID[d.phase] || '',
         round: d.round !== undefined ? d.round : '',
         query_type: d.query_type || '',
         orientation: d.orientation || '',
